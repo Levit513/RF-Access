@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">RF Access</string>
+    <string name="programming_title">RF Access Programming</string>
+    <string name="hold_card_message">Hold card to phone to program your RF Access Card</string>
+    <string name="success_message">Card programmed successfully!</string>
+    <string name="error_message">Programming failed. Please try again.</string>
+    <string name="waiting_message">Waiting for programming data...</string>
+</resources>

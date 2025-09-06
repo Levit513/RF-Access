@@ -116,9 +116,8 @@ CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
 
 
 # Determine the Java command to use to start the JVM.
-# Force JAVA_HOME to Java 17 (compatible with Gradle 8.0.2)
-export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 if [ -n "$JAVA_HOME" ] ; then
+    if [ -x "$JAVA_HOME/jre/sh/java" ] ; then
         # IBM's JDK on AIX uses strange locations for the executables
         JAVACMD=$JAVA_HOME/jre/sh/java
     else

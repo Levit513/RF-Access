@@ -24,20 +24,16 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
       
-    - name: Cache Gradle packages
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-        restore-keys: |
-          ${{ runner.os }}-gradle-
-          
     - name: Grant execute permission for gradlew
       run: |
         cd rf-access-app
         chmod +x gradlew
+        
+    - name: Clean build (no cache)
+      run: |
+        cd rf-access-app
+        ./gradlew clean --no-daemon
+        rm -rf ~/.gradle/caches/
         
     - name: Build APK
       run: |

@@ -2,49 +2,98 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- NFC permissions -->
     <uses-permission android:name="android.permission.NFC" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    
     <uses-feature
         android:name="android.hardware.nfc"
         android:required="true" />
-
-    <!-- Internet permission for fetching programming data -->
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
-        android:label="RF Access"
+        android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.RFAccess"
         tools:targetApi="31">
         
+        <!-- Login Activity - Entry point for deep links -->
         <activity
-            android:name=".MainActivity"
+            android:name=".LoginActivity"
             android:exported="true"
             android:launchMode="singleTop">
+            <!-- Standard launcher intent -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
             
-            <!-- NFC intent filters -->
-            <intent-filter>
-                <action android:name="android.nfc.action.TAG_DISCOVERED" />
+            <!-- Deep link intent filters -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <!-- Custom scheme for direct app links -->
+                <data android:scheme="rfaccess" />
             </intent-filter>
             
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <!-- HTTPS links for web-based distribution -->
+                <data android:scheme="https"
+                      android:host="rfaccess.app" />
+            </intent-filter>
+            
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <!-- Alternative domain for distribution -->
+                <data android:scheme="https"
+                      android:host="app.rfaccess.com" />
+            </intent-filter>
+        </activity>
+
+        <!-- Main Activity - NFC Programming -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop">
+            <!-- NFC intent filter -->
             <intent-filter>
                 <action android:name="android.nfc.action.TECH_DISCOVERED" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <meta-data
-                    android:name="android.nfc.action.TECH_DISCOVERED"
-                    android:resource="@xml/nfc_tech_filter" />
             </intent-filter>
+            <meta-data
+                android:name="android.nfc.action.TECH_DISCOVERED"
+                android:resource="@xml/nfc_tech_filter" />
         </activity>
+
+        <!-- Admin Activity -->
+        <activity
+            android:name=".AdminActivity"
+            android:exported="false" />
+
+        <!-- Firebase Messaging Service -->
+        <service
+            android:name=".RFAccessFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!-- Firebase default notification channel -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="rf_access_notifications" />
     </application>
+
 </manifest>

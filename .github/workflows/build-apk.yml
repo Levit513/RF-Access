@@ -15,34 +15,36 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Set up JDK 17
+    - name: Set up JDK 21
       uses: actions/setup-java@v4
       with:
-        java-version: '17'
+        java-version: '21'
         distribution: 'temurin'
         
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
       
-    - name: Cache Gradle packages
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-        restore-keys: |
-          ${{ runner.os }}-gradle-
-          
+    - name: Accept Android SDK licenses
+      run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
+      
+    - name: Install required Android SDK components
+      run: |
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0" "platforms;android-34" "platform-tools"
+        
     - name: Grant execute permission for gradlew
       run: |
         cd rf-access-app
         chmod +x gradlew
         
-    - name: Build APK
+    - name: Clean build
       run: |
         cd rf-access-app
-        ./gradlew assembleDebug --no-daemon --stacktrace
+        ./gradlew clean --no-daemon --info
+        
+    - name: Build APK with detailed logging
+      run: |
+        cd rf-access-app
+        ./gradlew assembleDebug --no-daemon --info --stacktrace
         
     - name: Upload APK
       uses: actions/upload-artifact@v4

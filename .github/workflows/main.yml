@@ -31,30 +31,25 @@ jobs:
       run: |
         $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0" "platforms;android-34" "platform-tools"
         
-    - name: Verify project structure
+    - name: Clear all Gradle caches
       run: |
-        ls -la rf-access-app/
-        ls -la rf-access-app/app/
+        rm -rf ~/.gradle/
+        rm -rf ~/.android/
         
     - name: Grant execute permission for gradlew
       run: |
         cd rf-access-app
         chmod +x gradlew
-        ls -la gradlew
         
-    - name: Clean build with detailed logging
+    - name: Clean build with fresh environment
       run: |
         cd rf-access-app
-        ./gradlew clean --no-daemon --stacktrace --info
+        ./gradlew clean --no-daemon --refresh-dependencies
         
-    - name: Build APK with full diagnostics
+    - name: Build APK with clean slate
       run: |
         cd rf-access-app
-        ./gradlew assembleDebug --no-daemon --stacktrace --info --debug
-        
-    - name: List build outputs
-      run: |
-        find rf-access-app/app/build -name "*.apk" -type f || echo "No APK files found"
+        ./gradlew assembleDebug --no-daemon --stacktrace --refresh-dependencies
         
     - name: Upload APK
       uses: actions/upload-artifact@v4

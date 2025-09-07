@@ -24,6 +24,9 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
       
+    - name: Accept all SDK licenses
+      run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
+      
     - name: Grant execute permission for gradlew
       run: |
         cd rf-access-app
@@ -33,7 +36,6 @@ jobs:
       run: |
         cd rf-access-app
         ./gradlew clean --no-daemon
-        rm -rf ~/.gradle/caches/
         
     - name: Build APK
       run: |

@@ -27,20 +27,34 @@ jobs:
     - name: Accept all SDK licenses
       run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
       
+    - name: Install required Android SDK components
+      run: |
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0" "platforms;android-34" "platform-tools"
+        
+    - name: Verify project structure
+      run: |
+        ls -la rf-access-app/
+        ls -la rf-access-app/app/
+        
     - name: Grant execute permission for gradlew
       run: |
         cd rf-access-app
         chmod +x gradlew
+        ls -la gradlew
         
-    - name: Clean build (no cache)
+    - name: Clean build with detailed logging
       run: |
         cd rf-access-app
-        ./gradlew clean --no-daemon
+        ./gradlew clean --no-daemon --stacktrace --info
         
-    - name: Build APK
+    - name: Build APK with full diagnostics
       run: |
         cd rf-access-app
-        ./gradlew assembleDebug --no-daemon --stacktrace
+        ./gradlew assembleDebug --no-daemon --stacktrace --info --debug
+        
+    - name: List build outputs
+      run: |
+        find rf-access-app/app/build -name "*.apk" -type f || echo "No APK files found"
         
     - name: Upload APK
       uses: actions/upload-artifact@v4

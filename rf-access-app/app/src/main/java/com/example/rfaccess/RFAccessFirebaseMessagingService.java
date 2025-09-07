@@ -83,19 +83,19 @@ public class RFAccessFirebaseMessagingService extends FirebaseMessagingService {
         String title = "RF Access Programming Ready";
         String body = "New card programming data received. Tap to open RF Access.";
         
-        Intent intent = new Intent(this, MainActivity.class);
+        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         intent.putExtra("from_notification", true);
         
         PendingIntent pendingIntent = PendingIntent.getActivity(
-            this, 
+            getApplicationContext(), 
             0, 
             intent, 
             PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE
         );
 
         NotificationCompat.Builder notificationBuilder =
-            new NotificationCompat.Builder(this, CHANNEL_ID)
+            new NotificationCompat.Builder(getApplicationContext(), CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
                 .setContentTitle(title)
                 .setContentText(body)
@@ -110,18 +110,18 @@ public class RFAccessFirebaseMessagingService extends FirebaseMessagingService {
     }
 
     private void showNotification(String title, String body) {
-        Intent intent = new Intent(this, LoginActivity.class);
+        Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         
         PendingIntent pendingIntent = PendingIntent.getActivity(
-            this, 
+            getApplicationContext(), 
             0, 
             intent, 
             PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE
         );
 
         NotificationCompat.Builder notificationBuilder =
-            new NotificationCompat.Builder(this, CHANNEL_ID)
+            new NotificationCompat.Builder(getApplicationContext(), CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_launcher_foreground)
                 .setContentTitle(title)
                 .setContentText(body)

@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Programs{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h2><i class="fas fa-code me-2"></i>Manage Programs</h2>
+            <p class="text-muted">View and redistribute existing MIFARE programs</p>
+        </div>
+    </div>
+
+    <!-- Programs Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-list me-2"></i>All Programs</h5>
+                    <a href="{{ url_for('create_program') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Create New Program
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if programs %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Program Name</th>
+                                    <th>Description</th>
+                                    <th>Created</th>
+                                    <th>Sectors</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for program in programs %}
+                                <tr>
+                                    <td>{{ program.id }}</td>
+                                    <td><strong>{{ program.name }}</strong></td>
+                                    <td>{{ program.description or 'No description' }}</td>
+                                    <td>{{ program.created_at.strftime('%Y-%m-%d %H:%M') if program.created_at else 'Unknown' }}</td>
+                                    <td>
+                                        {% set sector_data = program.sector_data | from_json %}
+                                        <span class="badge bg-info">{{ sector_data | length }} sectors</span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ url_for('redistribute_program', program_id=program.id) }}" 
+                                               class="btn btn-sm btn-success" title="Redistribute Program">
+                                                <i class="fas fa-share"></i> Redistribute
+                                            </a>
+                                            <button class="btn btn-sm btn-info" 
+                                                    onclick="viewProgramDetails({{ program.id }})" 
+                                                    title="View Details">
+                                                <i class="fas fa-eye"></i> View
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-code fa-3x text-muted mb-3"></i>
+                        <h5>No Programs Found</h5>
+                        <p class="text-muted">Create your first MIFARE program to get started.</p>
+                        <a href="{{ url_for('create_program') }}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Create First Program
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Program Details Modal -->
+    <div class="modal fade" id="programDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Program Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="programDetailsContent">
+                    <!-- Content loaded via JavaScript -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function viewProgramDetails(programId) {
+    // Find program in the table
+    const programs = {{ programs | tojson }};
+    const program = programs.find(p => p.id === programId);
+    
+    if (program) {
+        const sectorData = JSON.parse(program.sector_data);
+        let content = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Basic Information</h6>
+                    <p><strong>Name:</strong> ${program.name}</p>
+                    <p><strong>Description:</strong> ${program.description || 'No description'}</p>
+                    <p><strong>Created:</strong> ${program.created_at || 'Unknown'}</p>
+                </div>
+                <div class="col-md-6">
+                    <h6>Sector Information</h6>
+                    <p><strong>Total Sectors:</strong> ${Object.keys(sectorData).length}</p>
+                    <p><strong>Sectors:</strong> ${Object.keys(sectorData).join(', ')}</p>
+                </div>
+            </div>
+            <hr>
+            <h6>Sector Data Preview</h6>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Sector</th>
+                            <th>Blocks</th>
+                            <th>Key A</th>
+                            <th>Key B</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        for (const [sectorNum, sector] of Object.entries(sectorData)) {
+            content += `
+                <tr>
+                    <td>${sectorNum}</td>
+                    <td>${sector.blocks ? sector.blocks.length : 0}</td>
+                    <td><code>${sector.keys ? sector.keys.keyA : 'N/A'}</code></td>
+                    <td><code>${sector.keys ? sector.keys.keyB : 'N/A'}</code></td>
+                </tr>
+            `;
+        }
+        
+        content += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+        document.getElementById('programDetailsContent').innerHTML = content;
+        new bootstrap.Modal(document.getElementById('programDetailsModal')).show();
+    }
+}
+</script>
+{% endblock %}

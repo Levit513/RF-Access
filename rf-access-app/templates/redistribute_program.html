@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Redistribute Program{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h2><i class="fas fa-share me-2"></i>Redistribute Program</h2>
+            <p class="text-muted">Send existing program to another user</p>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-code me-2"></i>Program: {{ program.name }}</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Program Info -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6>Program Details</h6>
+                            <p><strong>Name:</strong> {{ program.name }}</p>
+                            <p><strong>Description:</strong> {{ program.description or 'No description' }}</p>
+                            <p><strong>Created:</strong> {{ program.created_at.strftime('%Y-%m-%d %H:%M') if program.created_at else 'Unknown' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Sector Information</h6>
+                            {% set sector_data = program.sector_data | from_json %}
+                            <p><strong>Total Sectors:</strong> {{ sector_data | length }}</p>
+                            <p><strong>Sectors:</strong> {{ sector_data.keys() | list | join(', ') }}</p>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Redistribution Form -->
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="user_id" class="form-label">
+                                <i class="fas fa-user me-2"></i>Select User to Redistribute To
+                            </label>
+                            <select class="form-select" id="user_id" name="user_id" required>
+                                <option value="">Choose a user...</option>
+                                {% for user in users %}
+                                <option value="{{ user.id }}">{{ user.username }} ({{ user.email }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Note:</strong> This will create a new 24-hour access link for the selected user. 
+                            The program can be redistributed multiple times to different users.
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-share me-2"></i>Redistribute Program
+                            </button>
+                            <a href="{{ url_for('manage_programs') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Programs
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Previous Distributions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-history me-2"></i>Distribution History</h5>
+                </div>
+                <div class="card-body">
+                    {% if program.distributions %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Distributed</th>
+                                    <th>Expires</th>
+                                    <th>Last Used</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for dist in program.distributions %}
+                                <tr>
+                                    <td>{{ dist.user.username }}</td>
+                                    <td>{{ dist.created_at.strftime('%Y-%m-%d %H:%M') if dist.created_at else 'Unknown' }}</td>
+                                    <td>{{ dist.expires_at.strftime('%Y-%m-%d %H:%M') if dist.expires_at else 'No expiry' }}</td>
+                                    <td>{{ dist.used_at.strftime('%Y-%m-%d %H:%M') if dist.used_at else 'Never' }}</td>
+                                    <td>
+                                        {% if dist.expires_at and dist.expires_at < moment().utc() %}
+                                            <span class="badge bg-danger">Expired</span>
+                                        {% elif dist.used_at %}
+                                            <span class="badge bg-success">Used</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Pending</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No previous distributions for this program.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

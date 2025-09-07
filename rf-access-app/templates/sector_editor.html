@@ -1,0 +1,401 @@
+{% extends "base.html" %}
+
+{% block title %}Sector Editor - MIFARE System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-edit me-2"></i>MIFARE Sector Editor</h2>
+            <div>
+                <button class="btn btn-success" onclick="scanCard()">
+                    <i class="fas fa-search me-2"></i>Scan Card
+                </button>
+                <button class="btn btn-primary" onclick="saveProgram()">
+                    <i class="fas fa-save me-2"></i>Save Program
+                </button>
+            </div>
+        </div>
+
+        <!-- Card Info Panel -->
+        <div class="card mb-4" id="cardInfoPanel" style="display: none;">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-credit-card me-2"></i>Card Information</h5>
+            </div>
+            <div class="card-body" id="cardInfo">
+                <!-- Card info will be populated here -->
+            </div>
+        </div>
+
+        <!-- Sector Editor -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-table me-2"></i>Sector Data Editor</h5>
+                <small class="text-muted">MIFARE Classic 1K (16 sectors, 4 blocks each)</small>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Card Type:</label>
+                        <select class="form-select" id="cardType" onchange="generateSectorTable()">
+                            <option value="classic_1k">MIFARE Classic 1K (16 sectors)</option>
+                            <option value="classic_4k">MIFARE Classic 4K (40 sectors)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Quick Actions:</label>
+                        <div class="btn-group w-100">
+                            <button class="btn btn-outline-secondary" onclick="clearAllSectors()">Clear All</button>
+                            <button class="btn btn-outline-info" onclick="loadTemplate()">Load Template</button>
+                            <button class="btn btn-outline-warning" onclick="exportJson()">Export JSON</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="sectorContainer">
+                    <!-- Sector tables will be generated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Save Program Modal -->
+<div class="modal fade" id="saveProgramModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Save Card Program</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="saveProgramForm">
+                    <div class="mb-3">
+                        <label class="form-label">Program Name</label>
+                        <input type="text" class="form-control" id="programName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" id="programDescription" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitProgram()">Save Program</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let sectorData = {};
+let currentCardType = 'classic_1k';
+
+// Initialize sector editor
+document.addEventListener('DOMContentLoaded', function() {
+    generateSectorTable();
+});
+
+function generateSectorTable() {
+    currentCardType = document.getElementById('cardType').value;
+    const sectorCount = currentCardType === 'classic_1k' ? 16 : 40;
+    const container = document.getElementById('sectorContainer');
+    
+    container.innerHTML = '';
+    sectorData = {};
+    
+    for (let sector = 0; sector < sectorCount; sector++) {
+        const sectorDiv = createSectorEditor(sector);
+        container.appendChild(sectorDiv);
+        
+        // Initialize sector data
+        sectorData[sector] = {
+            blocks: ['00000000000000000000000000000000', '00000000000000000000000000000000', 
+                    '00000000000000000000000000000000', 'FFFFFFFFFFFFFF078069FFFFFFFFFFFF'],
+            keys: { keyA: 'FFFFFFFFFFFF', keyB: 'FFFFFFFFFFFF' },
+            accessBits: '078069'
+        };
+    }
+}
+
+function createSectorEditor(sectorNum) {
+    const sectorDiv = document.createElement('div');
+    sectorDiv.className = 'mb-4';
+    sectorDiv.innerHTML = `
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">Sector ${sectorNum}</h6>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-secondary" onclick="copySector(${sectorNum})">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="clearSector(${sectorNum})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <thead>
+                            <tr>
+                                <th width="80">Block</th>
+                                <th>Data (32 hex characters)</th>
+                                <th width="100">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="align-middle">Block 0</td>
+                                <td>
+                                    <input type="text" class="form-control form-control-sm font-monospace" 
+                                           id="sector_${sectorNum}_block_0" maxlength="32" 
+                                           placeholder="00000000000000000000000000000000"
+                                           onchange="updateSectorData(${sectorNum}, 0, this.value)">
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-info" onclick="generateUID(${sectorNum})">
+                                        <i class="fas fa-random"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="align-middle">Block 1</td>
+                                <td>
+                                    <input type="text" class="form-control form-control-sm font-monospace" 
+                                           id="sector_${sectorNum}_block_1" maxlength="32" 
+                                           placeholder="00000000000000000000000000000000"
+                                           onchange="updateSectorData(${sectorNum}, 1, this.value)">
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="fillPattern(${sectorNum}, 1)">
+                                        <i class="fas fa-fill"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="align-middle">Block 2</td>
+                                <td>
+                                    <input type="text" class="form-control form-control-sm font-monospace" 
+                                           id="sector_${sectorNum}_block_2" maxlength="32" 
+                                           placeholder="00000000000000000000000000000000"
+                                           onchange="updateSectorData(${sectorNum}, 2, this.value)">
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="fillPattern(${sectorNum}, 2)">
+                                        <i class="fas fa-fill"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr class="table-warning">
+                                <td class="align-middle">Trailer</td>
+                                <td>
+                                    <div class="row g-1">
+                                        <div class="col-4">
+                                            <input type="text" class="form-control form-control-sm font-monospace" 
+                                                   id="sector_${sectorNum}_keyA" maxlength="12" 
+                                                   placeholder="FFFFFFFFFFFF" value="FFFFFFFFFFFF"
+                                                   onchange="updateKeys(${sectorNum})">
+                                            <small class="text-muted">Key A</small>
+                                        </div>
+                                        <div class="col-4">
+                                            <input type="text" class="form-control form-control-sm font-monospace" 
+                                                   id="sector_${sectorNum}_access" maxlength="6" 
+                                                   placeholder="078069" value="078069"
+                                                   onchange="updateKeys(${sectorNum})">
+                                            <small class="text-muted">Access</small>
+                                        </div>
+                                        <div class="col-4">
+                                            <input type="text" class="form-control form-control-sm font-monospace" 
+                                                   id="sector_${sectorNum}_keyB" maxlength="12" 
+                                                   placeholder="FFFFFFFFFFFF" value="FFFFFFFFFFFF"
+                                                   onchange="updateKeys(${sectorNum})">
+                                            <small class="text-muted">Key B</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-warning" onclick="resetKeys(${sectorNum})">
+                                        <i class="fas fa-key"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+    return sectorDiv;
+}
+
+function updateSectorData(sector, block, value) {
+    if (!sectorData[sector]) sectorData[sector] = { blocks: [] };
+    sectorData[sector].blocks[block] = value.toUpperCase().padEnd(32, '0');
+}
+
+function updateKeys(sector) {
+    const keyA = document.getElementById(`sector_${sector}_keyA`).value.toUpperCase();
+    const access = document.getElementById(`sector_${sector}_access`).value.toUpperCase();
+    const keyB = document.getElementById(`sector_${sector}_keyB`).value.toUpperCase();
+    
+    if (!sectorData[sector]) sectorData[sector] = {};
+    sectorData[sector].keys = { keyA, keyB };
+    sectorData[sector].accessBits = access;
+    
+    // Update trailer block
+    const trailer = keyA.padEnd(12, 'F') + access.padEnd(6, '0') + keyB.padEnd(12, 'F');
+    sectorData[sector].blocks[3] = trailer.padEnd(32, 'F');
+}
+
+function generateUID(sector) {
+    if (sector === 0) {
+        const uid = Array.from({length: 8}, () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')).join('').toUpperCase();
+        document.getElementById(`sector_${sector}_block_0`).value = uid + '000000000000000000000000';
+        updateSectorData(sector, 0, uid + '000000000000000000000000');
+    }
+}
+
+function fillPattern(sector, block) {
+    const patterns = ['00000000000000000000000000000000', 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF', 'DEADBEEFDEADBEEFDEADBEEFDEADBEEF'];
+    const pattern = patterns[Math.floor(Math.random() * patterns.length)];
+    document.getElementById(`sector_${sector}_block_${block}`).value = pattern;
+    updateSectorData(sector, block, pattern);
+}
+
+function clearSector(sector) {
+    for (let block = 0; block < 3; block++) {
+        document.getElementById(`sector_${sector}_block_${block}`).value = '';
+        updateSectorData(sector, block, '00000000000000000000000000000000');
+    }
+    resetKeys(sector);
+}
+
+function resetKeys(sector) {
+    document.getElementById(`sector_${sector}_keyA`).value = 'FFFFFFFFFFFF';
+    document.getElementById(`sector_${sector}_access`).value = '078069';
+    document.getElementById(`sector_${sector}_keyB`).value = 'FFFFFFFFFFFF';
+    updateKeys(sector);
+}
+
+function clearAllSectors() {
+    if (confirm('Clear all sector data?')) {
+        generateSectorTable();
+    }
+}
+
+function loadTemplate() {
+    // Load a basic template
+    const templates = {
+        'blank': 'Blank Card',
+        'access': 'Access Control Card',
+        'transport': 'Transport Card'
+    };
+    
+    // For now, just show available templates
+    alert('Templates: ' + Object.values(templates).join(', '));
+}
+
+function exportJson() {
+    const json = JSON.stringify(sectorData, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'mifare_program.json';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function scanCard() {
+    fetch('/api/scan_card')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.cards.length > 0) {
+                const card = data.cards[0];
+                document.getElementById('cardInfoPanel').style.display = 'block';
+                document.getElementById('cardInfo').innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>Reader:</strong> ${card.reader}<br>
+                            <strong>ATR:</strong> <code>${card.atr}</code>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Type:</strong> ${card.type || 'Unknown'}<br>
+                            <strong>UID:</strong> <code>${card.uid || 'Unknown'}</code>
+                        </div>
+                    </div>
+                `;
+            } else {
+                alert('No cards found. Please ensure a card is placed on the reader.');
+            }
+        })
+        .catch(error => {
+            alert('Error scanning card: ' + error.message);
+        });
+}
+
+function saveProgram() {
+    const modal = new bootstrap.Modal(document.getElementById('saveProgramModal'));
+    modal.show();
+}
+
+function submitProgram() {
+    const name = document.getElementById('programName').value;
+    const description = document.getElementById('programDescription').value;
+    
+    if (!name) {
+        alert('Please enter a program name');
+        return;
+    }
+    
+    if (Object.keys(sectorData).length === 0) {
+        alert('Please create some sector data first');
+        return;
+    }
+    
+    // Create a form and submit it properly
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/create_program';
+    
+    // Add CSRF token
+    const csrfToken = document.querySelector('meta[name=csrf-token]')?.getAttribute('content') || '';
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrf_token';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+    
+    // Add name
+    const nameInput = document.createElement('input');
+    nameInput.type = 'hidden';
+    nameInput.name = 'name';
+    nameInput.value = name;
+    form.appendChild(nameInput);
+    
+    // Add description
+    const descInput = document.createElement('input');
+    descInput.type = 'hidden';
+    descInput.name = 'description';
+    descInput.value = description;
+    form.appendChild(descInput);
+    
+    // Add sector data
+    const sectorInput = document.createElement('input');
+    sectorInput.type = 'hidden';
+    sectorInput.name = 'sector_data';
+    sectorInput.value = JSON.stringify(sectorData);
+    form.appendChild(sectorInput);
+    
+    // Submit form
+    document.body.appendChild(form);
+    form.submit();
+}
+</script>
+{% endblock %}

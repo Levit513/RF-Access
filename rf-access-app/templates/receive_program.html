@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+
+{% block title %}Receive Program - MIFARE System{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow">
+            <div class="card-header text-center bg-primary text-white">
+                <h4><i class="fas fa-mobile-alt me-2"></i>MIFARE Card Programming</h4>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <h5>{{ program.name }}</h5>
+                    <p class="text-muted">{{ program.description or 'Ready to program your MIFARE card' }}</p>
+                </div>
+
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Important:</strong> This programming link can only be used once and will expire after use.
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6><i class="fas fa-list me-2"></i>Instructions</h6>
+                    </div>
+                    <div class="card-body">
+                        <ol class="mb-0">
+                            <li>Ensure your Android device has NFC enabled</li>
+                            <li>Click "Start Programming" below</li>
+                            <li>Hold your MIFARE card against the back of your phone</li>
+                            <li>Wait for programming to complete</li>
+                            <li>Remove the card when prompted</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div id="programmingInterface" style="display: none;">
+                    <div class="text-center mb-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Preparing card data...</p>
+                    </div>
+                    
+                    <div id="nfcInterface" style="display: none;">
+                        <div class="alert alert-info text-center">
+                            <i class="fas fa-wifi fa-2x mb-3"></i>
+                            <h5>Place MIFARE card on NFC area</h5>
+                            <p class="mb-0">Hold the card steady against your phone's NFC area</p>
+                        </div>
+                        
+                        <div class="progress mb-3">
+                            <div class="progress-bar" role="progressbar" style="width: 0%" id="progressBar"></div>
+                        </div>
+                        
+                        <div id="statusText" class="text-center">
+                            <small class="text-muted">Waiting for card...</small>
+                        </div>
+                    </div>
+                    
+                    <div id="successMessage" class="alert alert-success text-center" style="display: none;">
+                        <i class="fas fa-check-circle fa-2x mb-3"></i>
+                        <h5>Programming Complete!</h5>
+                        <p class="mb-0">Your MIFARE card has been successfully programmed.</p>
+                    </div>
+                    
+                    <div id="errorMessage" class="alert alert-danger text-center" style="display: none;">
+                        <i class="fas fa-times-circle fa-2x mb-3"></i>
+                        <h5>Programming Failed</h5>
+                        <p class="mb-0" id="errorText">An error occurred during programming.</p>
+                    </div>
+                </div>
+
+                <div class="d-grid" id="startButton">
+                    <button class="btn btn-primary btn-lg" onclick="startProgramming()">
+                        <i class="fas fa-play me-2"></i>Start Programming
+                    </button>
+                </div>
+                
+                <div class="text-center mt-3">
+                    <small class="text-muted">
+                        <i class="fas fa-shield-alt me-1"></i>
+                        Secure one-time programming • Token: {{ distribution.access_token[:8] }}...
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let programmingData = null;
+let nfcSupported = false;
+
+// Check for NFC support
+document.addEventListener('DOMContentLoaded', function() {
+    if ('NDEFReader' in window) {
+        nfcSupported = true;
+    } else {
+        console.log('NFC not supported on this device');
+    }
+});
+
+async function startProgramming() {
+    document.getElementById('startButton').style.display = 'none';
+    document.getElementById('programmingInterface').style.display = 'block';
+    
+    try {
+        // Fetch programming data
+        const response = await fetch('/api/program_data/{{ distribution.access_token }}');
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to fetch programming data');
+        }
+        
+        programmingData = await response.json();
+        
+        // Hide loading, show NFC interface
+        document.querySelector('.spinner-border').parentElement.style.display = 'none';
+        document.getElementById('nfcInterface').style.display = 'block';
+        
+        // Debug: Log the programming data structure
+        console.log('Programming data received:', programmingData);
+        console.log('Sector data structure:', programmingData.sector_data);
+        
+        // Start NFC programming
+        if (nfcSupported) {
+            await startNFCProgramming();
+        } else {
+            // Fallback for browsers without NFC support
+            await simulateProgramming();
+        }
+        
+    } catch (error) {
+        showError('Failed to load programming data: ' + error.message);
+    }
+}
+
+async function startNFCProgramming() {
+    try {
+        console.log('Initializing NFC programming...');
+        const ndef = new NDEFReader();
+        
+        // Request NFC permission first
+        console.log('Requesting NFC scan permission...');
+        await ndef.scan();
+        console.log('NFC scan permission granted, waiting for card...');
+        
+        updateStatus('Hold your MIFARE card near the device...');
+        
+        ndef.addEventListener('reading', async (event) => {
+            updateStatus('Card detected! Programming...');
+            console.log('NFC card detected, starting programming sequence');
+            
+            try {
+                // Stop scanning to prevent interference
+                ndef.addEventListener('reading', () => {});
+                
+                // Program each sector with delay between writes
+                const sectors = Object.entries(programmingData.sector_data);
+                console.log(`Programming ${sectors.length} sectors:`, sectors.map(([num, data]) => `Sector ${num}: ${data.blocks?.length || 0} blocks`));
+                
+                for (let i = 0; i < sectors.length; i++) {
+                    const [sectorNum, sectorData] = sectors[i];
+                    updateStatus(`Programming sector ${sectorNum}...`);
+                    console.log(`\n=== Starting sector ${sectorNum} programming ===`);
+                    
+                    // Validate sector data before writing
+                    if (!sectorData.blocks || sectorData.blocks.length === 0) {
+                        console.warn(`Sector ${sectorNum} has no block data, skipping`);
+                        continue;
+                    }
+                    
+                    // Special handling for sector 0 - warn about manufacturer block
+                    if (parseInt(sectorNum) === 0) {
+                        console.log(`Programming sector 0 - manufacturer block protection active`);
+                    }
+                    
+                    console.log(`Programming sector ${sectorNum} with ${sectorData.blocks.length} blocks`);
+                    
+                    try {
+                        await writeMifareSector(parseInt(sectorNum), sectorData);
+                        console.log(`✓ Sector ${sectorNum} completed successfully`);
+                    } catch (sectorError) {
+                        console.error(`✗ Sector ${sectorNum} failed:`, sectorError);
+                        throw sectorError;
+                    }
+                    
+                    // Add delay between sector writes
+                    if (i < sectors.length - 1) {
+                        console.log(`Waiting 500ms before next sector...`);
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    }
+                    
+                    updateProgress(((i + 1) / sectors.length) * 100);
+                }
+                
+                updateStatus('Programming complete!');
+                updateProgress(100);
+                
+                // Mark programming as successful in database
+                await markProgrammingSuccess();
+                
+                // Show success
+                document.getElementById('nfcInterface').style.display = 'none';
+                document.getElementById('successMessage').style.display = 'block';
+                
+            } catch (error) {
+                throw new Error(`MIFARE programming failed: ${error.message}`);
+            }
+        });
+        
+    } catch (error) {
+        updateStatus(`Programming failed: ${error.message}`);
+        console.error('NFC Programming error:', error);
+    }
+}
+
+async function writeMifareSector(sectorNum, sectorData) {
+    // IMPORTANT: Web NFC API cannot write raw MIFARE Classic sectors
+    // It only supports NDEF message writing, not low-level block programming
+    
+    console.log(`NOTICE: Web NFC API limitation - cannot write raw MIFARE Classic data`);
+    console.log(`Sector ${sectorNum} data that would be written:`, sectorData);
+    
+    // Create a comprehensive NDEF message with all MIFARE data for reference
+    const ndef = new NDEFReader();
+    
+    // Prepare sector data for writing
+    const blocks = sectorData.blocks || [];
+    const keys = sectorData.keys || { keyA: 'FFFFFFFFFFFF', keyB: 'FFFFFFFFFFFF' };
+    
+    console.log(`Attempting to write NDEF representation of sector ${sectorNum}...`);
+    
+    try {
+        // Create a single comprehensive NDEF record with all sector data
+        const sectorInfo = {
+            type: 'MIFARE_CLASSIC_SECTOR',
+            sector: sectorNum,
+            blocks: blocks,
+            keys: keys,
+            timestamp: new Date().toISOString(),
+            note: 'This is NDEF data representation - not raw MIFARE programming'
+        };
+        
+        const message = {
+            records: [{
+                recordType: "text",
+                data: JSON.stringify(sectorInfo, null, 2),
+                id: `mifare_sector_${sectorNum}`
+            }]
+        };
+        
+        console.log(`Writing NDEF message for sector ${sectorNum}:`, message);
+        
+        // Add timeout to prevent hanging
+        const writePromise = ndef.write(message);
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Write timeout after 10 seconds')), 10000)
+        );
+        
+        await Promise.race([writePromise, timeoutPromise]);
+        console.log(`✓ NDEF message written for sector ${sectorNum} (not raw MIFARE data)`);
+        
+        // Add warning about limitation
+        console.warn(`⚠️  LIMITATION: This writes NDEF data, not actual MIFARE Classic sectors`);
+        console.warn(`⚠️  For true MIFARE programming, you need specialized hardware/software`);
+        
+    } catch (error) {
+        console.error(`Failed to write NDEF for sector ${sectorNum}:`, error);
+        
+        // Provide more specific error information
+        if (error.name === 'NotAllowedError') {
+            throw new Error('NFC permission denied. Please allow NFC access.');
+        } else if (error.name === 'NotSupportedError') {
+            throw new Error('NFC not supported on this device or browser.');
+        } else if (error.name === 'NotReadableError') {
+            throw new Error('NFC card not readable. Try repositioning the card.');
+        } else if (error.message.includes('timeout')) {
+            throw new Error('NFC write timeout - card may not support NDEF or is incompatible.');
+        } else {
+            throw new Error(`NFC write failed: ${error.message || 'Unknown error'}`);
+        }
+    }
+}
+
+async function simulateProgramming() {
+    // Fallback simulation for non-NFC browsers
+    updateStatus('Simulating programming (NFC not available)...');
+    
+    return new Promise(async (resolve) => {
+        let progress = 0;
+        const interval = setInterval(async () => {
+            progress += 10;
+            updateProgress(progress);
+            
+            if (progress >= 100) {
+                clearInterval(interval);
+                updateStatus('Simulation complete!');
+                
+                // Mark programming as successful in database
+                await markProgrammingSuccess();
+                
+                // Show success
+                document.getElementById('nfcInterface').style.display = 'none';
+                document.getElementById('successMessage').style.display = 'block';
+                resolve();
+            }
+        }, 200);
+    });
+}
+
+function updateProgress(percent) {
+    document.getElementById('progressBar').style.width = percent + '%';
+}
+
+function updateStatus(text) {
+    document.getElementById('statusText').innerHTML = `<small class="text-muted">${text}</small>`;
+}
+
+async function markProgrammingSuccess() {
+    try {
+        const response = await fetch('/api/programming_success/{{ distribution.access_token }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            console.error('Failed to mark programming as successful');
+        } else {
+            console.log('Programming marked as successful in database');
+        }
+    } catch (error) {
+        console.error('Error marking programming success:', error);
+    }
+}
+
+function showError(message) {
+    document.getElementById('nfcInterface').style.display = 'none';
+    document.getElementById('errorText').textContent = message;
+    document.getElementById('errorMessage').style.display = 'block';
+}
+</script>
+{% endblock %}

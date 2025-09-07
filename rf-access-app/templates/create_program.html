@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Create Program - MIFARE System{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header">
+                <h4><i class="fas fa-plus me-2"></i>Create Card Program</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        {{ form.name.label(class="form-label") }}
+                        {{ form.name(class="form-control") }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.description.label(class="form-label") }}
+                        {{ form.description(class="form-control", rows="3") }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.sector_data.label(class="form-label") }}
+                        {{ form.sector_data(class="form-control font-monospace", rows="10", placeholder='{"0": {"blocks": ["...", "...", "...", "..."], "keys": {"keyA": "FFFFFFFFFFFF", "keyB": "FFFFFFFFFFFF"}}}') }}
+                        <small class="text-muted">Enter sector data in JSON format or use the <a href="{{ url_for('sector_editor') }}">Sector Editor</a></small>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Create Program
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

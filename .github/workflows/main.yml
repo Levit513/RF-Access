@@ -1,28 +1,68 @@
-- name: Verify project structure
-  run: |
-    echo "=== Project Structure ==="
-    ls -la
-    echo "=== RF Access App Directory ==="
-    ls -la rf-access-app/
-    echo "=== Gradlew File Check ==="
-    ls -la rf-access-app/gradlew
-    echo "=== App Source Directory ==="
-    ls -la rf-access-app/app/
+name: Build RF Access APK
 
-- name: Fix gradlew permissions
-  run: |
-    cd rf-access-app
-    chmod +x gradlew
-    ls -la gradlew
-    echo "Gradlew permissions fixed"
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
 
-- name: Clean build with verification
-  run: |
-    cd rf-access-app
-    pwd
-    ./gradlew clean --no-daemon --refresh-dependencies --stacktrace --info
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+        
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      
+    - name: Accept Android SDK licenses
+      run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
+      
+    - name: Install required Android SDK components
+      run: |
+        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0" "platforms;android-34" "platform-tools"
+        
+    - name: Verify project structure
+      run: |
+        echo "=== Project Structure ==="
+        ls -la
+        echo "=== RF Access App Directory ==="
+        ls -la rf-access-app/
+        echo "=== Gradlew File Check ==="
+        ls -la rf-access-app/gradlew
+        echo "=== App Source Directory ==="
+        ls -la rf-access-app/app/
 
-- name: Build APK with verification
-  run: |
-    cd rf-access-app
-    ./gradlew assembleDebug --no-daemon --stacktrace --refresh-dependencies --info
+    - name: Fix gradlew permissions
+      run: |
+        cd rf-access-app
+        chmod +x gradlew
+        ls -la gradlew
+        echo "Gradlew permissions fixed"
+
+    - name: Clean build with verification
+      run: |
+        cd rf-access-app
+        pwd
+        ./gradlew clean --no-daemon --refresh-dependencies --stacktrace --info
+
+    - name: Build APK with verification
+      run: |
+        cd rf-access-app
+        ./gradlew assembleDebug --no-daemon --stacktrace --refresh-dependencies --info
+        
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: rf-access-debug-apk
+        path: rf-access-app/app/build/outputs/apk/debug/app-debug.apk
+        retention-days: 30

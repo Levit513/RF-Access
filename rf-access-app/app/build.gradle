@@ -58,6 +58,9 @@ dependencies {
     // Volley for network requests
     implementation 'com.android.volley:volley:1.2.1'
     
+    // Firebase Messaging for push notifications
+    implementation 'com.google.firebase:firebase-messaging:23.4.1'
+    
     // Basic HTTP client without transitive dependencies
     implementation 'com.squareup.okhttp3:okhttp:4.10.0'
     
@@ -67,9 +70,6 @@ dependencies {
 }
 
 configurations.all {
-    exclude group: 'com.google.firebase'
-    exclude group: 'com.google.android.gms'
-    exclude group: 'com.google.android.play'
     exclude group: 'org.jetbrains.kotlin'
     exclude module: 'okio-jvm'
     exclude module: 'kotlin-stdlib'

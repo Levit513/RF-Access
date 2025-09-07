@@ -25,7 +25,6 @@ public class MainActivity extends AppCompatActivity {
     
     private TextView statusText;
     private TextView instructionText;
-    private TextView cardStatusText;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,9 +38,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initializeViews() {
-        statusText = findViewById(R.id.textView);
+        statusText = findViewById(R.id.statusText);
         instructionText = findViewById(R.id.instructionText);
-        cardStatusText = findViewById(R.id.cardStatusText);
+        // cardStatusText is not needed as it doesn't exist in the layout
     }
 
     private void initializeNFC() {
@@ -88,7 +87,6 @@ public class MainActivity extends AppCompatActivity {
         if (pendingCardData != null) {
             Log.d(TAG, "Found pending card data from deep link");
             instructionText.setText("Card programming data ready! Hold your RF Access card near the phone to program it.");
-            cardStatusText.setText("Programming data: Ready");
             
             Toast.makeText(this, "Ready to program your card with new data", Toast.LENGTH_LONG).show();
         }
@@ -107,10 +105,8 @@ public class MainActivity extends AppCompatActivity {
         
         if (pendingCardData != null) {
             instructionText.setText("Hold your RF Access card near the phone to program it with new data.");
-            cardStatusText.setText("Status: Ready to program");
         } else {
             instructionText.setText("Hold your RF Access card near the phone to program it.");
-            cardStatusText.setText("Status: Waiting for card");
         }
         
         Log.d(TAG, "UI updated for user: " + username);
@@ -137,7 +133,6 @@ public class MainActivity extends AppCompatActivity {
         Log.d(TAG, "NFC tag detected: " + tag.toString());
         
         // Update UI to show card detected
-        cardStatusText.setText("Status: Card detected");
         instructionText.setText("Programming your RF Access card...");
         
         // Check for pending card data from deep link
@@ -166,13 +161,11 @@ public class MainActivity extends AppCompatActivity {
             runOnUiThread(() -> {
                 if (cardData != null) {
                     // Programming with specific data from deep link
-                    cardStatusText.setText("Status: Programming complete");
                     instructionText.setText("Your RF Access card has been programmed successfully with the new data!");
                     Toast.makeText(this, "Card programmed with new access data", Toast.LENGTH_LONG).show();
                     Log.d(TAG, "Card programmed with deep link data: " + action);
                 } else {
                     // Standard programming
-                    cardStatusText.setText("Status: Programming complete");
                     instructionText.setText("Your RF Access card has been programmed successfully!");
                     Toast.makeText(this, "RF Access card programming complete", Toast.LENGTH_LONG).show();
                     Log.d(TAG, "Standard card programming completed");
@@ -187,7 +180,6 @@ public class MainActivity extends AppCompatActivity {
         } catch (InterruptedException e) {
             Log.e(TAG, "Programming simulation interrupted", e);
             runOnUiThread(() -> {
-                cardStatusText.setText("Status: Programming failed");
                 instructionText.setText("Card programming failed. Please try again.");
                 Toast.makeText(this, "Programming failed. Please try again.", Toast.LENGTH_SHORT).show();
             });

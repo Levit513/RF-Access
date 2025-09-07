@@ -7,6 +7,7 @@
     
     <!-- Background Colors -->
     <color name="background">#F5F5F5</color>
+    <color name="background_light">#F5F5F5</color>
     <color name="surface">#FFFFFF</color>
     
     <!-- Text Colors -->

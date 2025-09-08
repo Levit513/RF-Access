@@ -48,31 +48,50 @@ public class LoginActivity extends AppCompatActivity {
         if (data != null) {
             Log.d(TAG, "Deep link received: " + data.toString());
             
-            // Extract parameters from deep link
-            String username = data.getQueryParameter("username");
-            String cardData = data.getQueryParameter("cardData");
-            String action = data.getQueryParameter("action");
+            String username = null;
+            String cardData = null;
+            String action = null;
             
-            if (username != null && !username.isEmpty()) {
-                usernameInput.setText(username);
-                Log.d(TAG, "Username from deep link: " + username);
+            // Handle different URL formats
+            if (data.getHost() != null && data.getHost().equals("programmer.513solutions.com")) {
+                // Extract from 513solutions.com URL path
+                String path = data.getPath();
+                if (path != null && path.startsWith("/program/")) {
+                    String token = path.substring("/program/".length());
+                    // For now, we'll need to decode this token or make an API call
+                    // Simulating extraction for demo
+                    username = "user_from_token";
+                    cardData = token; // Use token as card data for now
+                    action = "program";
+                    
+                    Log.d(TAG, "513solutions.com link - Token: " + token);
+                }
+            } else {
+                // Handle standard query parameters
+                username = data.getQueryParameter("username");
+                cardData = data.getQueryParameter("cardData");
+                action = data.getQueryParameter("action");
             }
             
-            if (cardData != null && !cardData.isEmpty()) {
-                // Store card data for programming
+            if (username != null && cardData != null) {
+                // Store the deep link data for later use
                 SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-                prefs.edit()
-                    .putString("pendingCardData", cardData)
-                    .putString("deepLinkAction", action != null ? action : "program")
-                    .apply();
-                Log.d(TAG, "Card data stored from deep link");
+                SharedPreferences.Editor editor = prefs.edit();
+                editor.putString("pendingCardData", cardData);
+                editor.putString("deepLinkAction", action != null ? action : "program");
+                editor.putString("deepLinkUsername", username);
+                editor.apply();
                 
-                Toast.makeText(this, "Card programming data received", Toast.LENGTH_SHORT).show();
+                Log.d(TAG, "Deep link data stored for user: " + username);
+                
+                // Show message to user
+                Toast.makeText(this, "Card programming data received for " + username, Toast.LENGTH_LONG).show();
+                
+                // Auto-login the user if username matches
+                autoLoginFromDeepLink(username);
             }
-            
-            // Show welcome message for deep link users
-            Toast.makeText(this, "Welcome to RF Access!", Toast.LENGTH_LONG).show();
         }
+        Toast.makeText(this, "Welcome to RF Access!", Toast.LENGTH_LONG).show();
     }
 
     private void checkExistingLogin() {

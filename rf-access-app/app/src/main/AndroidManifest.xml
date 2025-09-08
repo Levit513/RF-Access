@@ -65,6 +65,16 @@
                       android:host="app.rfaccess.com"
                       android:pathPrefix="/open" />
             </intent-filter>
+            
+            <!-- 513 Solutions programmer domain -->
+            <intent-filter android:autoVerify="true" android:priority="1000">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https"
+                      android:host="programmer.513solutions.com"
+                      android:pathPrefix="/program" />
+            </intent-filter>
         </activity>
 
         <!-- Main Activity - NFC Programming -->

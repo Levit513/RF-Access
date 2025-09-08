@@ -5,12 +5,14 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.SharedPreferences;
 import android.content.Intent;
-import android.app.NotificationManager;
-import android.app.NotificationChannel;
+import android.content.Context;
+import android.util.Log;
+import android.os.Build;
 import androidx.core.app.NotificationCompat;
 import org.json.JSONObject;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
+import java.util.Map;
 
 public class RFAccessFirebaseMessagingService extends FirebaseMessagingService {
     private static final String TAG = "RFAccessFCM";
@@ -78,6 +80,27 @@ public class RFAccessFirebaseMessagingService extends FirebaseMessagingService {
         String cardData = data.get("cardData");
         storePendingCardData(username, cardData);
         showProgrammingNotification(username, cardData);
+    }
+
+    private void showEmulationNotification(String title, String message) {
+        Intent intent = new Intent(getApplicationContext(), EmulationControlActivity.class);
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+            getApplicationContext(), 
+            0, 
+            intent, 
+            PendingIntent.FLAG_ONE_SHOT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(getApplicationContext(), CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(title)
+            .setContentText(message)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(pendingIntent);
+
+        NotificationManager notificationManager = getSystemService(NotificationManager.class);
+        notificationManager.notify(2001, notificationBuilder.build());
     }
 
     private void handleEmulationControl(Map<String, String> data) {

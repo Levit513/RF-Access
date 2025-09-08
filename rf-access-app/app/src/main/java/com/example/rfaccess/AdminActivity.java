@@ -109,6 +109,18 @@ public class AdminActivity extends Activity {
         }
     }
 
+    private void logout() {
+        // Clear login session
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        prefs.edit().clear().apply();
+        
+        // Return to login
+        Intent intent = new Intent(AdminActivity.this, LoginActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
+    }
+
     private void loadRegisteredUsers() {
         // Simulate loading registered users
         // In a real implementation, this would fetch from your backend API

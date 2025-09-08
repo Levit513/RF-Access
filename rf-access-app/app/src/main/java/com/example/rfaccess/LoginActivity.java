@@ -113,6 +113,25 @@ public class LoginActivity extends AppCompatActivity {
         }
     }
 
+    private void autoLoginFromDeepLink(String username) {
+        if (username == null || username.trim().length() < 3) {
+            Toast.makeText(this, "Invalid username from deep link", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        prefs.edit()
+            .putString(KEY_USERNAME, username)
+            .putBoolean(KEY_IS_LOGGED_IN, true)
+            .putBoolean(KEY_IS_ADMIN, false)
+            .apply();
+
+        Log.d(TAG, "Auto-login from deep link: " + username);
+        Toast.makeText(this, "Welcome, " + username + "!", Toast.LENGTH_SHORT).show();
+        Intent intent = new Intent(this, MainActivity.class);
+        startActivity(intent);
+        finish();
+    }
+
     private void setupClickListeners() {
         signInButton.setOnClickListener(new View.OnClickListener() {
             @Override

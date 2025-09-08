@@ -123,19 +123,6 @@ public class AdminActivity extends Activity {
         }
     }
 
-    private void logout() {
-        // Clear login state
-        SharedPreferences prefs = getSharedPreferences("RFAccessPrefs", MODE_PRIVATE);
-        SharedPreferences.Editor editor = prefs.edit();
-        editor.remove("isLoggedIn");
-        editor.remove("username");
-        editor.remove("isAdmin");
-        editor.apply();
-
-        // Return to login activity
-        finish();
-    }
-
     @Override
     protected void onDestroy() {
         super.onDestroy();

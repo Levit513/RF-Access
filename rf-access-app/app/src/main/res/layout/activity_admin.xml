@@ -91,6 +91,22 @@
                     android:backgroundTint="@color/primary"
                     android:textColor="@android:color/white" />
 
+                <Button
+                    android:id="@+id/emulationControlButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="MIFARE Emulation Control"
+                    android:backgroundTint="@color/primary"
+                    android:layout_marginTop="16dp" />
+
+                <Button
+                    android:id="@+id/logoutButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/logout_button"
+                    android:backgroundTint="@color/secondary"
+                    android:layout_marginTop="24dp" />
+
             </LinearLayout>
 
         </com.google.android.material.card.MaterialCardView>

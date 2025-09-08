@@ -2,13 +2,18 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Permissions -->
     <uses-permission android:name="android.permission.NFC" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.VIBRATE" />
     
     <uses-feature
         android:name="android.hardware.nfc"
+        android:required="true" />
+    <uses-feature
+        android:name="android.hardware.nfc.hce"
         android:required="true" />
 
     <application
@@ -33,8 +38,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
             
-            <!-- Deep link intent filters -->
-            <intent-filter android:autoVerify="true">
+            <!-- Deep link intent filters with higher priority -->
+            <intent-filter android:priority="1000">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
@@ -42,22 +47,23 @@
                 <data android:scheme="rfaccess" />
             </intent-filter>
             
-            <intent-filter android:autoVerify="true">
+            <!-- Force app opening for specific paths -->
+            <intent-filter android:priority="1000">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <!-- HTTPS links for web-based distribution -->
                 <data android:scheme="https"
-                      android:host="rfaccess.app" />
+                      android:host="rfaccess.app"
+                      android:pathPrefix="/app" />
             </intent-filter>
             
-            <intent-filter android:autoVerify="true">
+            <intent-filter android:priority="1000">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <!-- Alternative domain for distribution -->
                 <data android:scheme="https"
-                      android:host="app.rfaccess.com" />
+                      android:host="app.rfaccess.com"
+                      android:pathPrefix="/open" />
             </intent-filter>
         </activity>
 
@@ -81,6 +87,12 @@
             android:name=".AdminActivity"
             android:exported="false" />
 
+        <!-- Emulation Control Activity -->
+        <activity
+            android:name=".EmulationControlActivity"
+            android:exported="false"
+            android:launchMode="singleTop" />
+
         <!-- Firebase Messaging Service -->
         <service
             android:name=".RFAccessFirebaseMessagingService"
@@ -88,6 +100,19 @@
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
+        </service>
+
+        <!-- Host Card Emulation Service for MIFARE emulation -->
+        <service
+            android:name=".MifareEmulationService"
+            android:exported="true"
+            android:permission="android.permission.BIND_NFC_SERVICE">
+            <intent-filter>
+                <action android:name="android.nfc.cardemulation.action.HOST_APDU_SERVICE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.nfc.cardemulation.host_apdu_service"
+                android:resource="@xml/apdu_service" />
         </service>
 
         <!-- Firebase default notification channel -->

@@ -3,12 +3,12 @@ package com.example.rfaccess;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
-import android.content.Context;
-import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.Build;
-import android.util.Log;
+import android.content.Intent;
+import android.app.NotificationManager;
+import android.app.NotificationChannel;
 import androidx.core.app.NotificationCompat;
+import org.json.JSONObject;
 import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 
@@ -30,24 +30,18 @@ public class RFAccessFirebaseMessagingService extends FirebaseMessagingService {
         if (remoteMessage.getData().size() > 0) {
             Log.d(TAG, "Message data payload: " + remoteMessage.getData());
             
-            // Extract card programming data from the message
-            String username = remoteMessage.getData().get("username");
-            String cardData = remoteMessage.getData().get("cardData");
-            String action = remoteMessage.getData().get("action");
-            
-            if ("program".equals(action) && cardData != null) {
-                // Store the programming data for later use
-                storePendingCardData(username, cardData);
-                
-                // Show notification to user
-                showProgrammingNotification(username, cardData);
+            String type = remoteMessage.getData().get("type");
+            if ("programming_data".equals(type)) {
+                handleProgrammingData(remoteMessage.getData());
+            } else if ("emulation_control".equals(type)) {
+                handleEmulationControl(remoteMessage.getData());
             }
         }
 
         // Check if message contains a notification payload
         if (remoteMessage.getNotification() != null) {
             Log.d(TAG, "Message Notification Body: " + remoteMessage.getNotification().getBody());
-            showNotification(
+            showProgrammingNotification(
                 remoteMessage.getNotification().getTitle(),
                 remoteMessage.getNotification().getBody()
             );
@@ -76,7 +70,38 @@ public class RFAccessFirebaseMessagingService extends FirebaseMessagingService {
         editor.putLong("pending_timestamp", System.currentTimeMillis());
         editor.apply();
         
-        Log.d(TAG, "Stored pending card data for user: " + username);
+        Log.d(TAG, "Programming data stored for user: " + username);
+    }
+
+    private void handleProgrammingData(Map<String, String> data) {
+        String username = data.get("username");
+        String cardData = data.get("cardData");
+        storePendingCardData(username, cardData);
+        showProgrammingNotification(username, cardData);
+    }
+
+    private void handleEmulationControl(Map<String, String> data) {
+        try {
+            String payloadJson = data.get("payload");
+            if (payloadJson != null) {
+                JSONObject payload = new JSONObject(payloadJson);
+                String username = payload.getString("username");
+                String cardData = payload.getString("cardData");
+                boolean activate = payload.getBoolean("activate");
+                
+                // Update emulation settings
+                MifareEmulationService.updateEmulationData(getApplicationContext(), cardData, activate);
+                
+                // Show notification
+                String title = activate ? "Card Emulation Activated" : "Card Emulation Deactivated";
+                String message = activate ? "Your phone will now emulate a MIFARE card" : "Card emulation has been disabled";
+                showEmulationNotification(title, message);
+                
+                Log.d(TAG, "Emulation control updated for user: " + username + ", active: " + activate);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error handling emulation control", e);
+        }
     }
 
     private void showProgrammingNotification(String username, String cardData) {

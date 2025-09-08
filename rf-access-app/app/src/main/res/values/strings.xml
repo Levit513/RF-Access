@@ -1,9 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">RF Access</string>
-    <string name="programming_title">RF Access Programming</string>
-    <string name="hold_card_message">Hold card to phone to program your RF Access Card</string>
-    <string name="success_message">Card programmed successfully!</string>
-    <string name="error_message">Programming failed. Please try again.</string>
+    <string name="login_title">RF Access Login</string>
+    <string name="username_hint">Enter your username</string>
+    <string name="login_button">Login</string>
+    <string name="admin_title">RF Access Admin Portal</string>
+    <string name="programming_data_title">Programming Data</string>
+    <string name="registered_users_title">Registered Users</string>
+    <string name="logout_button">Logout</string>
+    <string name="servicedesc">RF Access MIFARE Card Emulation Service</string>
+    <string name="aiddescription">RF Access Card Emulation</string>
     <string name="waiting_message">Waiting for programming data...</string>
-</resources>        
+</resources>

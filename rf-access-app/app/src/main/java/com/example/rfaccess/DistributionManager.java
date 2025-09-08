@@ -172,13 +172,9 @@ public class DistributionManager {
             long cutoffTime = System.currentTimeMillis() - olderThanMillis;
             
             int deletedCount = 0;
-            distributions.removeIf(d -> {
-                if (d.timestamp < cutoffTime) {
-                    deletedCount++;
-                    return true;
-                }
-                return false;
-            });
+            int initialSize = distributions.size();
+            distributions.removeIf(d -> d.timestamp < cutoffTime);
+            deletedCount = initialSize - distributions.size();
             
             JSONArray array = new JSONArray();
             for (Distribution dist : distributions) {
